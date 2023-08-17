@@ -4,34 +4,39 @@ import PropTypes from 'prop-types';
 
 import { StyledOverlay, StyledModal } from './Modal.styled';
 
-class Modal extends React.Component {
-  handleKeyDown = event => {
-    if (event.code === 'Escape') {
-      this.props.onCloseModal();
-    }
-  };
-  handleOverlayClick = event => {
-    if (event.target === event.currentTarget) {
-      this.props.onCloseModal();
-    }
-  };
-  componentDidMount() {
+import { useEffect } from 'react';
+
+const Modal = ({ visibleData, onCloseModal }) => {
+  useEffect(() => {
+    const handleKeyDown = event => {
+      if (event.code === 'Escape') {
+        onCloseModal();
+      }
+    };
     console.log('Модалка успішно змонтована');
-    window.addEventListener('keydown', this.handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
     document.body.style.overflow = 'hidden';
-  }
-  componentWillUnmount() {
-    window.removeEventListener('keydown', this.handleKeyDown);
-    document.body.style.overflow = '';
-  }
-  render() {
-    const { visibleData } = this.props;
-    // console.log(image);
-    return (
-      <StyledOverlay onClick={this.handleOverlayClick}>
-        <StyledModal>
-          <button onClick={this.props.onCloseModal}>&times;</button>
-          {/* <br /> */}
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      document.body.style.overflow = '';
+    };
+  }, [onCloseModal]);
+  const handleOverlayClick = event => {
+    if (event.target === event.currentTarget) {
+      onCloseModal();
+    }
+  };
+
+  return (
+    <StyledOverlay onClick={handleOverlayClick}>
+      <StyledModal>
+        <button onClick={onCloseModal}>&times;</button>
+
+        <ul>
+          {Array.isArray.visibleData &&
+            visibleData.map(comment => (
+              <li key={comment.id}>{comment.body}</li>
+            ))}
           <img
             src={visibleData.largeImageURL}
             alt={visibleData.tags}
@@ -41,17 +46,17 @@ class Modal extends React.Component {
               height: 'auto',
             }}
           />
-        </StyledModal>
-      </StyledOverlay>
-    );
-  }
-}
+        </ul>
+      </StyledModal>
+    </StyledOverlay>
+  );
+};
 
 Modal.propTypes = {
   image: PropTypes.shape({
     largeImageURL: PropTypes.string.isRequired,
     tags: PropTypes.string.isRequired,
-  }).isRequired,
+  }),
   onCloseModal: PropTypes.func.isRequired,
 };
 

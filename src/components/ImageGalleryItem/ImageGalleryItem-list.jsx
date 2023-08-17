@@ -11,4 +11,5 @@ export const StyledImageGalleryItem = styled.li`
     transform: scale(1.03);
     cursor: zoom-in;
   }
+  height: 300px;
 `;

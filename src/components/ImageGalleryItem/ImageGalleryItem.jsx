@@ -5,12 +5,12 @@ export const ImageGalleryItem = ({ image, onOpenModal }) => {
   return (
     <StyledImageGalleryItem
       onClick={() => onOpenModal(image)}
-      className="gallery-item"
+      // className="gallery-item"
     >
       <img
         src={image.webformatURL}
         alt={image.tags}
-        className="gallery-image"
+        // className="gallery-image"
         width="320"
       />
     </StyledImageGalleryItem>

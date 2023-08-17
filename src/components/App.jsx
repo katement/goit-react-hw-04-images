@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -11,125 +11,111 @@ import Modal from './Modal/Modal';
 import { fetchData } from './services/api';
 import { Loader } from './Loader/Loader';
 
-export class App extends React.Component {
-  state = {
-    posts: [],
-    isLoading: false,
-    error: null,
-    query: '',
-    page: 1,
+export const App = () => {
+  const [posts, setPosts] = useState([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [query, setQuery] = useState('');
+  const [page, setPage] = useState(1);
 
-    showLoadMore: false,
+  const [showLoadMore, setShowLoadMore] = useState(false);
 
-    modal: {
-      isOpen: false,
-      visibleData: null,
-    },
-  };
-  componentDidUpdate(prevProps, prevState) {
-    if (this.state.query !== prevState.query) {
-      this.setState({ posts: [], page: 1, loadMore: false });
-      this.fetchPosts();
-    }
-    if (this.state.page !== prevState.page) this.loadMore();
-  }
+  const [isOpen, setIsOpen] = useState(false);
+  const [visibleData, setVisibleData] = useState(null);
 
-  fetchPosts = async () => {
-    try {
-      this.setState({ isLoading: true });
-      const posts = await fetchData(this.state.query, this.state.page);
-      toast.success(`We have found ${posts.total} results`);
+  useEffect(() => {
+    const fetchPosts = async (query, page) => {
+      try {
+        setIsLoading(true);
+        const response = await fetchData(query, page);
+        const newPosts = response.hits;
+        if (newPosts.length > 12) setShowLoadMore(true);
+        if (newPosts.length === 0) {
+          setPosts([]);
+          return;
+        }
+        if (page === 1) {
+          setPosts(newPosts);
+        } else {
+          setPosts(prevPosts => [...prevPosts, newPosts]);
+        }
+      } catch (error) {
+        setError(error);
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    if (query.length === 0 && page === 1) return;
+    fetchPosts(query, page);
+  }, [query, page]);
 
-      this.setState(prevState => ({
-        posts: [...posts.hits],
-        showLoadMore: posts.totalHits / this.state.page > 12,
-      }));
-    } catch (error) {
-      toast.error(`Oops, some error occured ${error.message}`);
-    } finally {
-      this.setState({ isLoading: false });
-    }
-  };
-
-  handleSubmit = event => {
-    event.preventDefault();
-    const newQuery = event.currentTarget[1].value;
+  const handleSubmit = searchQuery => {
+  
+    const newQuery = searchQuery;
     if (newQuery.trim().length === 0) {
       return toast.info('Please, enter your search query firstly');
     }
-    if (this.state.query !== newQuery) {
-      this.setState({ query: newQuery, page: 1 });
+    if (query !== newQuery) {
+      setQuery(newQuery);
+      setPage(1);
     }
   };
 
-  incrementPage = () => {
-    this.setState(prevState => ({ page: prevState.page + 1 }));
-  };
-  loadMore = async () => {
-    try {
-      this.setState({ isLoading: true });
-      const posts = await fetchData(this.state.query, this.state.page);
-
-      this.setState(prevState => ({
-        posts: [...prevState.posts, ...posts.hits],
-        showLoadMore: posts.totalHits / this.state.page > 12,
-      }));
-    } catch (error) {
-      toast.error(`Oops, some error occured ${error.message}`);
-    } finally {
-      this.setState({ isLoading: false });
-    }
-  };
-  onOpenModal = data => {
-    this.setState({
-      modal: {
-        isOpen: true,
-        visibleData: data,
-      },
-    });
-  };
-  onCloseModal = () => {
-    this.setState({
-      modal: {
-        isOpen: false,
-        visibleData: null,
-      },
-    });
+  const incrementPage = () => {
+    // loadMore();
+    setPage(prevPage => prevPage + 1);
   };
 
-  render() {
-    return (
-      <div>
-        {this.state.modal.isOpen && (
-          <Modal
-            visibleData={this.state.modal.visibleData}
-            onCloseModal={this.onCloseModal}
-          />
-        )}
-        {this.state.isLoading && <Loader />}
-        <Searchbar onSubmit={this.handleSubmit} />
-        <ImageGallery
-          images={this.state.posts}
-          onOpenModal={this.onOpenModal}
-        />
+  // const loadMore = async () => {
+  //   try {
+  //     setIsLoading(true);
+  //     const posts = await fetchData(query, page);
 
-        {this.state.showLoadMore && <Button onClick={this.incrementPage} />}
+  //     setPosts(prevPosts => [...prevPosts, ...posts.hits]);
+  //     setShowLoadMore(posts.totalHits / page > 12);
+  //   } catch (error) {
+  //     toast.error(`Oops, some error occured ${error.message}`);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+  const onOpenModal = data => {
+    setIsOpen(true);
 
-        <ToastContainer
-          position="top-right"
-          autoClose={2500}
-          hideProgressBar={true}
-          newestOnTop={false}
-          closeOnClick
-          rtl={false}
-          pauseOnFocusLoss
-          draggable
-          pauseOnHover
-          theme="colored"
-        />
-      </div>
-    );
-  }
-}
+    setVisibleData(data);
+  };
+  const onCloseModal = () => {
+    setIsOpen(false);
+    setVisibleData(null);
+  };
 
+  return (
+    <div>
+      {error && <p>{error.message}</p>}
+      {isOpen && (
+        <Modal visibleData={visibleData} onCloseModal={onCloseModal} />
+      )}
+      {isLoading && <Loader />}
+      <Searchbar onSubmit={handleSubmit} />
+      <ImageGallery images={posts} onOpenModal={onOpenModal} />
+
+      {posts.length % 12 === 0 && posts.length >= 12 && (
+        <Button onClick={incrementPage} />
+      )}
+
+      <ToastContainer
+        position="top-right"
+        autoClose={2500}
+        hideProgressBar={true}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="colored"
+      />
+    </div>
+  );
+};
 export default App;
